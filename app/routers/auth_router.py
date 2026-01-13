@@ -13,7 +13,6 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=UserRead)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
-    # Check if first user
     is_first_user = db.query(User).count() == 0
 
     user = User(
