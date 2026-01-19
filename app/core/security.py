@@ -16,7 +16,26 @@ def create_access_token(data: dict):
     expire = datetime.utcnow() + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    to_encode.update({"exp": expire})
+    to_encode.update({
+        "exp": expire,
+        "type": "access"
+    })
+    return jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+
+
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(
+        minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
+    )
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh"
+    })
     return jwt.encode(
         to_encode,
         settings.SECRET_KEY,
@@ -41,9 +60,14 @@ def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
+
+        if payload.get("type") != "access":
+            raise credentials_exception
+
         user_id: str | None = payload.get("sub")
         if user_id is None:
             raise credentials_exception
+
     except JWTError:
         raise credentials_exception
 
@@ -52,5 +76,3 @@ def get_current_user(
         raise credentials_exception
 
     return user
-
-
