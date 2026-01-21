@@ -40,7 +40,6 @@ def update_profile(
     return current_user
 
 
-
 @router.get("", response_model=list[UserRead])
 def get_all_users(
     db: Session = Depends(get_db),

@@ -1,67 +1,66 @@
 import stripe
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.db import get_db
+from app.models.payment import Payment
 from app.models.order import Order
+from app.utils.email import send_order_email
 
-router = APIRouter(prefix="/stripe", tags=["Stripe Webhook"])
-
+router = APIRouter(prefix="/webhook", tags=["Webhook"])
 stripe.api_key = settings.STRIPE_SECRET_KEY
-endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
 
 @router.post("/stripe")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
     try:
         event = stripe.Webhook.construct_event(
-            payload=payload,
-            sig_header=sig_header,
-            secret=endpoint_secret,
+            payload,
+            sig_header,
+            settings.STRIPE_WEBHOOK_SECRET,
         )
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid payload")
+        raise HTTPException(400, "Webhook error")
 
-    db: Session = SessionLocal()
+    if event["type"] != "checkout.session.completed":
+        return {"status": "ignored"}
 
-    try:
-        if event["type"] == "payment_intent.succeeded":
-            intent = event["data"]["object"]
+    session = event["data"]["object"]
 
-            payment = db.query(Payment).filter(
-                Payment.stripe_payment_intent_id == intent["id"]
-            ).first()
+    if session.get("payment_status") != "paid":
+        return {"status": "not_paid"}
 
-            if payment:
-                payment.status = "SUCCESS"
+    payment = (
+        db.query(Payment).filter(Payment.stripe_session_id == session["id"]).first()
+    )
 
-                order = db.query(Order).filter(
-                    Order.id == payment.order_id
-                ).first()
+    if not payment or payment.status == "SUCCESS":
+        return {"status": "already_processed"}
 
-                if order:
-                    order.status = "PAID"
+    order = db.query(Order).filter(Order.id == session["metadata"]["order_id"]).first()
 
-                db.commit()
+    if not order or not order.user.email:
+        return {"status": "missing_email"}
 
-        elif event["type"] == "payment_intent.payment_failed":
-            intent = event["data"]["object"]
+    email = order.user.email
+    order_id = str(order.id)
+    amount = payment.amount
 
-            payment = db.query(Payment).filter(
-                Payment.stripe_payment_intent_id == intent["id"]
-            ).first()
+    payment.status = "SUCCESS"
+    order.status = "PAID"
+    db.commit()
 
-            if payment:
-                payment.status = "FAILED"
-                db.commit()
-
-    finally:
-        db.close()
+    background_tasks.add_task(
+        send_order_email, to_email=email, order_id=order_id, amount=amount
+    )
 
     return {"status": "ok"}

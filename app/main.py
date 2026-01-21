@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import FastAPI, Request
 
 from app.database.db import Base, engine
@@ -11,7 +12,6 @@ from app.routers.payment_router import router as payment_router
 from app.routers.webhook_router import router as webhook_router
 
 from app.models.payment import Payment
-
 
 app = FastAPI()
 

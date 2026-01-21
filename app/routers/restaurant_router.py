@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from uuid import UUID 
+from uuid import UUID
 
 
 from app.database.db import get_db
 from app.models.restaurant import Restaurant
 from app.models.user import User
-from app.schemas.restaurant_schema import (RestaurantCreate, RestaurantUpdate, RestaurantRead,)
+from app.schemas.restaurant_schema import (
+    RestaurantCreate,
+    RestaurantUpdate,
+    RestaurantRead,
+)
 from app.core.security import get_current_user
 
 router = APIRouter(prefix="/restaurants", tags=["Restaurants"])
@@ -42,11 +46,7 @@ def get_restaurant(
     restaurant_id: UUID,
     db: Session = Depends(get_db),
 ):
-    restaurant = (
-        db.query(Restaurant)
-        .filter(Restaurant.id == restaurant_id)
-        .first()
-    )
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
@@ -62,11 +62,7 @@ def update_restaurant(
 ):
     admin_only(current_user)
 
-    restaurant = (
-        db.query(Restaurant)
-        .filter(Restaurant.id == restaurant_id)
-        .first()
-    )
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
@@ -86,11 +82,7 @@ def delete_restaurant(
 ):
     admin_only(current_user)
 
-    restaurant = (
-        db.query(Restaurant)
-        .filter(Restaurant.id == restaurant_id)
-        .first()
-    )
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 

@@ -11,6 +11,7 @@ from app.core.security import get_current_user
 
 router = APIRouter(prefix="/menus", tags=["Menus"])
 
+
 def admin_only(user: User):
     if user.role.lower() != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -25,9 +26,7 @@ def create_menu(
     admin_only(current_user)
 
     restaurant = (
-        db.query(Restaurant)
-        .filter(Restaurant.id == payload.restaurant_id)
-        .first()
+        db.query(Restaurant).filter(Restaurant.id == payload.restaurant_id).first()
     )
     if not restaurant:
         raise HTTPException(404, "Restaurant not found")
@@ -44,11 +43,7 @@ def get_menu_by_restaurant(
     restaurant_id: UUID,
     db: Session = Depends(get_db),
 ):
-    return (
-        db.query(Menu)
-        .filter(Menu.restaurant_id == restaurant_id)
-        .all()
-    )
+    return db.query(Menu).filter(Menu.restaurant_id == restaurant_id).all()
 
 
 @router.put("/{menu_id}", response_model=MenuRead)
@@ -73,7 +68,8 @@ def update_menu(
 
 
 @router.delete("/{menu_id}")
-def delete_menu(menu_id: UUID,
+def delete_menu(
+    menu_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -86,5 +82,3 @@ def delete_menu(menu_id: UUID,
     db.delete(menu)
     db.commit()
     return {"message": "Menu item deleted successfully"}
-
-

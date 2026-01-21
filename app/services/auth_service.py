@@ -28,7 +28,6 @@ def create_refresh_token(db: Session, user_id: str) -> str:
     payload = {"sub": str(user_id), "exp": expire, "iat": now}
     token_str = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-
     db_token = RefreshToken(
         user_id=user_id,
         token=token_str,
@@ -88,9 +87,7 @@ def refresh_access_token(db: Session, refresh_token: str):
     user_id = payload.get("sub")
 
     db_token = (
-        db.query(RefreshToken)
-        .filter(RefreshToken.token == refresh_token)
-        .first()
+        db.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
     )
 
     if not db_token:
@@ -102,7 +99,6 @@ def refresh_access_token(db: Session, refresh_token: str):
     if db_token.expires_at < datetime.utcnow():
         raise HTTPException(401, "Refresh token expired")
 
-    
     db.delete(db_token)
     db.commit()
 
@@ -119,9 +115,7 @@ def refresh_access_token(db: Session, refresh_token: str):
 
 def logout(db: Session, refresh_token: str):
     db_token = (
-        db.query(RefreshToken)
-        .filter(RefreshToken.token == refresh_token)
-        .first()
+        db.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
     )
 
     if db_token:

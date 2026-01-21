@@ -13,13 +13,8 @@ security = HTTPBearer()
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    to_encode.update({
-        "exp": expire,
-        "type": "access"
-    })
+    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(
         to_encode,
         settings.SECRET_KEY,
@@ -32,10 +27,7 @@ def create_refresh_token(data: dict):
     expire = datetime.utcnow() + timedelta(
         minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
-    to_encode.update({
-        "exp": expire,
-        "type": "refresh"
-    })
+    to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(
         to_encode,
         settings.SECRET_KEY,

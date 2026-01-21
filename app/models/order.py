@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime
+from sqlalchemy import Numeric
 
 from app.database.db import Base
 
@@ -12,8 +13,14 @@ class Order(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.id"), nullable=False)
+    restaurant_id = Column(
+        UUID(as_uuid=True), ForeignKey("restaurants.id"), nullable=False
+    )
     status = Column(String, default="Placed")
-    total_amount = Column(String, default="0")
+    total_amount = Column(Numeric(10, 2), default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    items = relationship(
+        "OrderItem", back_populates="order", cascade="all, delete-orphan"
+    )
+
+    user = relationship("User", back_populates="orders")

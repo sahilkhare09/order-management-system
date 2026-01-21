@@ -8,8 +8,7 @@ from app.models.order_item import OrderItem
 from app.models.restaurant import Restaurant
 from app.models.menu import Menu
 from app.models.user import User
-from app.schemas.order_schema import (OrderCreate, OrderRead, OrderStatusUpdate,    )
-
+from app.schemas.order_schema import OrderCreate, OrderRead, OrderStatusUpdate
 from app.core.security import get_current_user
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -20,89 +19,79 @@ def admin_only(user: User):
         raise HTTPException(403, "Admin access required")
 
 
-
 @router.post("/with-items", response_model=OrderRead)
 def place_order_with_items(
     payload: OrderCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    try:
-        restaurant = db.query(Restaurant).filter(
-            Restaurant.id == payload.restaurant_id
-        ).first()
-        if not restaurant:
-            raise HTTPException(404, "Restaurant not found")
+    restaurant = (
+        db.query(Restaurant).filter(Restaurant.id == payload.restaurant_id).first()
+    )
 
-        menu_ids = [item.menu_id for item in payload.items]
+    if not restaurant:
+        raise HTTPException(404, "Restaurant not found")
 
-        menu_items = db.query(Menu).filter(
+    for item in payload.items:
+        if not isinstance(item.quantity, int) or item.quantity <= 0:
+            raise HTTPException(400, "Quantity must be a positive integer")
+
+    menu_ids = [item.menu_id for item in payload.items]
+
+    menu_items = (
+        db.query(Menu)
+        .filter(
             Menu.id.in_(menu_ids),
             Menu.restaurant_id == payload.restaurant_id,
-            Menu.is_available.is_(True)
-        ).all()
-
-        if len(menu_items) != len(set(menu_ids)):
-            raise HTTPException(400, "Invalid or unavailable menu items")
-
-        order = Order(
-            user_id=current_user.id,
-            restaurant_id=payload.restaurant_id,
-            status="Placed",
-            total_amount=0
+            Menu.is_available.is_(True),
         )
-        db.add(order)
-        db.flush()
+        .all()
+    )
 
-        menu_map = {m.id: m for m in menu_items}
-        total_amount = 0
+    if len(menu_items) != len(set(menu_ids)):
+        raise HTTPException(400, "Invalid or unavailable menu items")
 
-        order_items = []
-        for item in payload.items:
-            menu = menu_map[item.menu_id]
-            item_total = menu.price * item.quantity
-            total_amount += item_total
+    order = Order(
+        user_id=current_user.id,
+        restaurant_id=payload.restaurant_id,
+        status="PLACED",
+        total_amount=0,
+    )
+    db.add(order)
+    db.flush()
 
-            order_items.append(
-                OrderItem(
-                    order_id=order.id,
-                    menu_id=menu.id,
-                    quantity=item.quantity,
-                    price_at_order=menu.price
-                )
+    menu_map = {menu.id: menu for menu in menu_items}
+    total_amount = 0
+
+    for item in payload.items:
+        menu = menu_map[item.menu_id]
+        total_amount += menu.price * item.quantity
+
+        db.add(
+            OrderItem(
+                order_id=order.id,
+                menu_id=menu.id,
+                quantity=item.quantity,
+                price_at_order=menu.price,
             )
+        )
 
-        db.add_all(order_items)
+    order.total_amount = total_amount
+    db.commit()
+    db.refresh(order)
+
+    return order
 
 
-        order.total_amount = total_amount
-
-        db.commit()
-        db.refresh(order)
-        return order
-
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(500, f"Order failed: {str(e)}")
-
-    
 @router.get("", response_model=list[OrderRead])
 def get_my_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return db.query(Order).filter(
-        Order.user_id == current_user.id
-    ).all()
+    return db.query(Order).filter(Order.user_id == current_user.id).all()
 
 
-
-
-@router.get("/{order_id}", response_model=OrderRead
-)
+@router.get("/{order_id}", response_model=OrderRead)
 def get_order_detail(
     order_id: UUID,
     db: Session = Depends(get_db),
@@ -117,7 +106,6 @@ def get_order_detail(
         raise HTTPException(403, "Access denied")
 
     return order
-
 
 
 @router.put("/{order_id}/status", response_model=OrderRead)
@@ -138,5 +126,3 @@ def update_order_status(
     db.refresh(order)
 
     return order
-
-

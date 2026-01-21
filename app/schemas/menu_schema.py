@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional
 
+
 class MenuCreate(BaseModel):
     restaurant_id: UUID
     name: str

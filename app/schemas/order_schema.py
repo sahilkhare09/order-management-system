@@ -1,13 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from typing import List
 from datetime import datetime
 
 
-
 class OrderItemCreate(BaseModel):
     menu_id: UUID
-    quantity: int
+    quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
 
 
 class OrderItemRead(BaseModel):
@@ -18,7 +17,6 @@ class OrderItemRead(BaseModel):
 
     class Config:
         from_attributes = True
-
 
 
 class OrderCreate(BaseModel):

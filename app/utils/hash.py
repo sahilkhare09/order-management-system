@@ -1,9 +1,6 @@
 from passlib.context import CryptContext
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 MAX_PASSWORD_LENGTH = 72
 
