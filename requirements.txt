@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+pydantic-settings
+python-dotenv
+psycopg2-binary
+stripe
+requests
+email-validator
+python-jose[cryptography]
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+google-auth
+google-auth-oauthlib
+python-multipart

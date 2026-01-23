@@ -15,7 +15,9 @@ from app.models.payment import Payment
 
 app = FastAPI()
 
-Base.metadata.create_all(bind=engine)
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
 
 
 app.include_router(user_router)
